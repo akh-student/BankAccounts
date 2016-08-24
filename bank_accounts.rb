@@ -2,51 +2,23 @@ require 'csv'
 
 
 module Bank
-  class Bank
-
-    attr_reader :array_of_accounts
-
-    def initialize
-      @array_of_accounts = []
-      puts "I did this!"
-    end
-
-    def add_accounts_from_csv(file, first_import_line = 0, last_import_line = nil)
-
-      if last_import_line == nil
-        last_import_line = CSV.read("#{file}").length
-      end
-
-      counter = 0
-
-      CSV.open("#{file}", "r").each do |line|
-        if counter >= first_import_line && counter <= last_import_line
-          @array_of_accounts << Account.new(line[0], line[1], line[2], nil)
-        end
-        counter += 1
-      end
-    end
-
-    def all
-      @array_of_accounts.each do |account|
-        puts account
-      end
-    end
-  end
 
   class Account
 
     attr_reader :account_id, :owner, :open_date
     attr_accessor :balance
 
+    @@array_of_accounts = []
+
     def initialize(account_id, initial_balance, open_date = nil, owner = nil)
       if initial_balance.to_i < 0
         raise ArgumentError
       else
-        @account_id = account_id
-        @balance = initial_balance
+        @account_id = account_id.to_i
+        @balance = initial_balance.to_i
         @open_date = open_date
         @owner = owner
+        @@array_of_accounts << self
       end
     end
 
@@ -78,37 +50,127 @@ module Bank
         puts "Owner is:\n#{@owner.puts_owner_address}"
       end
     end
+
+    def self.associate_owner_and_account_by_csv(file, first_import_line = 0, last_import_line = nil)
+
+      if last_import_line == nil
+        last_import_line = CSV.read("#{file}").length
+      end
+
+      counter = 0
+
+      CSV.open("#{file}", "r").each do |line|
+        if counter >= first_import_line && counter <= last_import_line
+          account = Bank::Account.find(line[0].to_i)
+          owner = Bank::Owner.find(line[1].to_i)
+          if account == "Account ID not in system" && owner == "Owner ID not in system"
+            puts "Account ID and Owner ID not in system"
+          elsif account == "Account ID not in system"
+            puts account
+          elsif owner == "Owner ID not in system"
+            puts owner
+          else
+            account.add_owner(owner)
+          end
+        end
+        counter += 1
+      end
+
+    end
+
+
+    def self.create_accounts_from_csv(file, first_import_line = 0, last_import_line = nil)
+
+      if last_import_line == nil
+        last_import_line = CSV.read("#{file}").length
+      end
+
+      counter = 0
+
+      CSV.open("#{file}", "r").each do |line|
+        if counter >= first_import_line && counter <= last_import_line
+          Account.new(line[0], line[1], line[2], nil)
+        end
+        counter += 1
+      end
+
+    end
+
+    def self.all
+      return @@array_of_accounts
+    end
+
+    def self.find(id)
+      @@array_of_accounts.each do |account|
+        if account.account_id == id
+          return account
+        end
+      end
+      return "Account ID not in system"
+    end
+
   end
 
 
 
   class Owner
 
-    attr_reader :first_name, :last_name, :street1, :street2, :city, :state, :zip, :ssn, :dob
+    attr_reader :owner_id, :last_name, :first_name, :street1, :city, :state
+
+    @@array_of_owners = []
 
     def initialize(owner_hash = {})
-      @first_name = owner_hash[:first_name]
+      @owner_id = owner_hash[:owner_id].to_i
       @last_name = owner_hash[:last_name]
+      @first_name = owner_hash[:first_name]
       @street1 = owner_hash[:street1]
-      @street2 = owner_hash[:street2]
       @city = owner_hash[:city]
       @state = owner_hash[:state]
-      @zip = owner_hash[:zip]
-      @ssn = owner_hash[:ssn]
-      @dob = owner_hash[:dob]
+      @@array_of_owners << self
     end
 
     def puts_owner_address
-      return "#{@last_name}, #{@first_name}\n#{@street1}\n#{@street2}\n#{@city}, #{@state} #{@zip}"
+      return "#{@last_name}, #{@first_name}\n#{@street1}\n#{@city}, #{@state}"
     end
+
+    def self.create_owners_from_csv(file, first_import_line = 0, last_import_line = nil)
+
+      if last_import_line == nil
+        last_import_line = CSV.read("#{file}").length
+      end
+
+      counter = 0
+
+      CSV.open("#{file}", "r").each do |line|
+        if counter >= first_import_line && counter <= last_import_line
+          Owner.new(owner_id: line[0], last_name: line[1], first_name: line[2], street1: line[3], city: line[4], state: line[5])
+        end
+        counter += 1
+      end
+
+    end
+
+    def self.all
+      return @@array_of_owners
+    end
+
+    def self.find(id)
+      @@array_of_owners.each do |owner|
+        if owner.owner_id == id
+          return owner
+        end
+      end
+      return "Owner ID not in system"
+    end
+
+
   end
 end
 
-new_tester = Bank::Bank.new
-
-new_tester.add_accounts_from_csv("support/accounts.csv")
-
-new_tester.all
+Bank::Account.create_accounts_from_csv("support/accounts.csv")
+Bank::Owner.create_owners_from_csv("support/owners.csv")
+Bank::Account.associate_owner_and_account_by_csv("support/account_owners.csv")
+puts Bank::Account.all
 
 
 
