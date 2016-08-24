@@ -59,7 +59,7 @@ module Bank
 
       counter = 0
 
-      CSV.open("#{file}", "r").each do |line|
+      CSV.open(file, "r").each do |line|
         if counter >= first_import_line && counter <= last_import_line
           account = Bank::Account.find(line[0].to_i)
           owner = Bank::Owner.find(line[1].to_i)
@@ -97,16 +97,16 @@ module Bank
     end
 
     def self.all
-      return @@array_of_accounts
+      @@array_of_accounts
     end
 
     def self.find(id)
       @@array_of_accounts.each do |account|
         if account.account_id == id
-          return account
+          account
         end
       end
-      return "Account ID not in system"
+      "Account ID not in system"
     end
 
     def self.save_all_data_to_csv
@@ -141,7 +141,7 @@ module Bank
     end
 
     def puts_owner_address
-      return "#{@last_name}, #{@first_name}\n#{@street1}\n#{@city}, #{@state}"
+      "#{@last_name}, #{@first_name}\n#{@street1}\n#{@city}, #{@state}"
     end
 
     def self.create_owners_from_csv(file, first_import_line = 0, last_import_line = nil)
@@ -152,7 +152,7 @@ module Bank
 
       counter = 0
 
-      CSV.open("#{file}", "r").each do |line|
+      CSV.open(file, "r").each do |line|
         if counter >= first_import_line && counter <= last_import_line
           Owner.new(owner_id: line[0], last_name: line[1], first_name: line[2], street1: line[3], city: line[4], state: line[5])
         end
@@ -162,7 +162,7 @@ module Bank
     end
 
     def self.all
-      return @@array_of_owners
+      @@array_of_owners
     end
 
     def self.find(id)
@@ -171,7 +171,7 @@ module Bank
           return owner
         end
       end
-      return "Owner ID not in system"
+      "Owner ID not in system"
     end
 
 
