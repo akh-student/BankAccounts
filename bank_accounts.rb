@@ -1,15 +1,51 @@
+require 'csv'
+
+
 module Bank
+  class Bank
+
+    attr_reader :array_of_accounts
+
+    def initialize
+      @array_of_accounts = []
+      puts "I did this!"
+    end
+
+    def add_accounts_from_csv(file, first_import_line = 0, last_import_line = nil)
+
+      if last_import_line == nil
+        last_import_line = CSV.read("#{file}").length
+      end
+
+      counter = 0
+
+      CSV.open("#{file}", "r").each do |line|
+        if counter >= first_import_line && counter <= last_import_line
+          @array_of_accounts << Account.new(line[0], line[1], line[2], nil)
+        end
+        counter += 1
+      end
+    end
+
+    def all
+      @array_of_accounts.each do |account|
+        puts account
+      end
+    end
+  end
+
   class Account
 
-    attr_reader :account_id, :owner
+    attr_reader :account_id, :owner, :open_date
     attr_accessor :balance
 
-    def initialize(account_id, initial_balance, owner = nil)
-      if initial_balance < 0
+    def initialize(account_id, initial_balance, open_date = nil, owner = nil)
+      if initial_balance.to_i < 0
         raise ArgumentError
       else
         @account_id = account_id
         @balance = initial_balance
+        @open_date = open_date
         @owner = owner
       end
     end
@@ -44,6 +80,8 @@ module Bank
     end
   end
 
+
+
   class Owner
 
     attr_reader :first_name, :last_name, :street1, :street2, :city, :state, :zip, :ssn, :dob
@@ -66,12 +104,20 @@ module Bank
   end
 end
 
-account1 = Bank::Account.new(1235, 100)
-puts account1.puts_account_info
+new_tester = Bank::Bank.new
+
+new_tester.add_accounts_from_csv("support/accounts.csv")
+
+new_tester.all
 
 
-owner1 = Bank::Owner.new(first_name: "Alyssa", last_name: "Hursh", street1: "1620 E Fir St", city: "Seattle", state: "WA", zip: 98122, ssn: "XXX-XX-XXXX", dob: "12/25/1985")
 
-account1.add_owner(owner1)
-
-puts account1.puts_account_info
+# account1 = Bank::Account.new(1235, 100)
+# puts account1.puts_account_info
+#
+#
+# owner1 = Bank::Owner.new(first_name: "Alyssa", last_name: "Hursh", street1: "1620 E Fir St", city: "Seattle", state: "WA", zip: 98122, ssn: "XXX-XX-XXXX", dob: "12/25/1985")
+#
+# account1.add_owner(owner1)
+#
+# puts account1.puts_account_info
