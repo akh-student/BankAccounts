@@ -109,7 +109,18 @@ module Bank
       return "Account ID not in system"
     end
 
+    def self.save_all_data_to_csv
+      CSV.open("support/accounts_with_owners.csv", "w") do |file|
+        @@array_of_accounts.each do |account|
+          owner = account.owner
+          output = [account.account_id, account.balance, account.open_date, owner.owner_id, owner.last_name, owner.first_name, owner.street1, owner.state, owner.city]
+          file << output
+        end
+      end
+    end
+
   end
+
 
 
 
@@ -170,8 +181,7 @@ end
 Bank::Account.create_accounts_from_csv("support/accounts.csv")
 Bank::Owner.create_owners_from_csv("support/owners.csv")
 Bank::Account.associate_owner_and_account_by_csv("support/account_owners.csv")
-puts Bank::Account.all
-
+Bank::Account.save_all_data_to_csv
 
 
 # account1 = Bank::Account.new(1235, 100)
