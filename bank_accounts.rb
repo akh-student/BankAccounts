@@ -12,15 +12,15 @@ module Bank
     # Open class variable as blank Array to store instances of Account class.
     @@array_of_accounts = []
 
-    # Initialize new bank account with account id, initila balance, open date, owner, withdrawl fee, and minimum balance
-    def initialize(account_id, initial_balance, open_date = nil, owner = nil, withdrawl_fee = 0, min_balance = 0)
+    # Initialize new bank account with account id, initila balance, open date, owner, withdrawal fee, and minimum balance
+    def initialize(account_id, initial_balance, open_date = nil, owner = nil, withdrawal_fee = 0, min_balance = 0)
 
       # Store minimum balance as instance variables
       @min_balance = min_balance
 
       #if the initial balance is less than the minimum allowed balance raise the argument error that an opening balance cannot be negative.
       if initial_balance.to_i < @min_balance
-        raise ArgumentError, "Opening balance can't be negative."
+        raise ArgumentError, "Opening balance can't be below account minimum"
 
       # Otherwise, store account information as instance variables, and shovel new Account instance into the array of Account instances.
       else
@@ -28,7 +28,7 @@ module Bank
         @balance = initial_balance.to_i
         @open_date = open_date
         @owner = owner
-        @withdrawl_fee = withdrawl_fee
+        @withdrawal_fee = withdrawal_fee
         @@array_of_accounts << self
       end
     end
@@ -37,14 +37,14 @@ module Bank
     # Define withdraw method
     def withdraw(amount)
 
-      #If the current balance minus the withdrawl amount and the withdrawl fee will bring the account below the minimum allowed balance, display a message and return the original, unmodified balance.
-      if @balance - (amount + @withdrawl_fee) < @min_balance
+      #If the current balance minus the withdrawal amount and the withdrawal fee will bring the account below the minimum allowed balance, display a message and return the original, unmodified balance.
+      if @balance - (amount + @withdrawal_fee) < @min_balance
         puts "You do not have enough money in your account to withdraw that amount."
         @balance
 
-      # Otherwise (if the withdrawl is allowable), deduct the amount from the balance and return the new balance.
+      # Otherwise (if the withdrawal is allowable), deduct the amount from the balance and return the new balance.
       else
-        @balance -= (amount + @withdrawl_fee)
+        @balance -= (amount + @withdrawal_fee)
         @balance
       end
     end
@@ -212,7 +212,7 @@ module Bank
 
   # A helpful interest rate method to be used by multiple classes.
   module InterestRate
-    def add_interest(rate)
+    def add_interest(rate = 0.25)
       interest = @balance * rate / 100
       @balance += interest
       interest
@@ -222,8 +222,8 @@ module Bank
   # Define a new account type (child of accont class) called Savings account
   class SavingsAccount < Account
 
-    # Initialize the savings account using the parent initialize, replacing the default withdrawl fee to $2.00 and the minimum balance to $10.00
-    def initialize(account_id, initial_balance, open_date = nil, owner = nil, withdrawl_fee = 200, min_balance = 1000)
+    # Initialize the savings account using the parent initialize, replacing the default withdrawal fee to $2.00 and the minimum balance to $10.00
+    def initialize(account_id, initial_balance, open_date = nil, owner = nil, withdrawal_fee = 200, min_balance = 1000)
       super
     end
 
@@ -237,10 +237,11 @@ module Bank
 
     attr_reader :checks_used
 
-    # Initialize the savings account using the parent initialize, replacing the default withdrawl fee to $1.00. Add the instance variable checks_used and set it to 0
-    def initialize(account_id, initial_balance, open_date = nil, owner = nil, withdrawl_fee = 100, min_balance = 0)
+    # Initialize the savings account using the parent initialize, replacing the default withdrawal fee to $1.00. Add the instance variable checks_used and set it to 0
+    def initialize(account_id, initial_balance, open_date = nil, owner = nil, withdrawal_fee = 100, min_balance = 0)
       super
       @checks_used = 0
+      @max_neg_check_balance = -1000
     end
 
     # Define a method to withdraw using a check
@@ -250,22 +251,22 @@ module Bank
       non_check_min_balance = @min_balance
 
       # Reset the minimum balance to -$10.00 for the purpose of processing checks.
-      @min_balance = -1000
+      @min_balance = @max_neg_check_balance
 
       # If the customer has not used three checks yet
-      if @checks_used <= 3
+      if @checks_used < 3
 
-        # Withdraw the money
+        # Withdraw the money and refund the withdrawal fee.
         withdraw(amount)
+        @balance += @withdrawal_fee
 
       else
-        # Otherwise, withdraw the money and charge a withdrawl fee.
+        # Otherwise, withdraw the money and charge a withdrawal fee.
         withdraw(amount)
-        balance += @withdrawl_fee
 
       end
 
-      # Increment checks used
+      # Increment checks used. REVIEW: Checks used increments if check bounces. Not fair to customer.
       @checks_used += 1
 
       # Reset minimum balance to standard minimum balance.
@@ -276,6 +277,13 @@ module Bank
     def reset_checks
       @checks_used = 0
     end
+
+    # Modify the inherited account status method, which simply puts information about the account (intended for testing purposes). Add the checks used data.
+    def account_status
+      super
+      puts "Checks Used: #{@checks_used}"
+      puts "**************"
+    end
   end
 
   # Define a new account type (child of accont class) called Money Market account
@@ -283,11 +291,11 @@ module Bank
 
     attr_reader :transactions_month_to_date
 
-    # Initialize the savings account using the parent initialize, replacing the default withdrawl fee to $100.00 and the minimum account balance to $10,000. Add the instance variables transactions month to date, max monthly transactions and reset the minmum balance 0 (after using minimum balance to check against initial balance, since account does not actually have a minimum balance of $10,000).
-    def initialize(account_id, initial_balance, open_date = nil, owner = nil, withdrawl_fee = 10000, min_balance = 1000000, max_monthly_transactions = 6)
+    # Initialize the savings account using the parent initialize, replacing the default withdrawal fee to $100.00 and the minimum account balance to $10,000. Add the instance variables transactions month to date, max monthly transactions and reset the minmum balance 0 (after using minimum balance to check against initial balance, since account does not actually have a minimum balance of $10,000).
+    def initialize(account_id, initial_balance, open_date = nil, owner = nil, withdrawal_fee = 10000, min_balance = 1000000)
       super
       @transactions_month_to_date = 0
-      @max_monthly_transactions = max_monthly_transactions
+      @max_monthly_transactions = 6
       @feeless_balance = 1000000
       @min_balance = 0
 
@@ -302,7 +310,7 @@ module Bank
       end
     end
 
-    # Modify the inherited withdrawl method.
+    # Modify the inherited withdrawal method.
     def withdraw(amount)
 
       # Verify if transactions are currently allowed, only proceed if true
@@ -311,14 +319,14 @@ module Bank
         #Increment the transactions this month to date
         @transactions_month_to_date += 1
 
-        # If the result of this transaction will be less than the feeless balance, perform the parent withdrawl method but increment the transactions month to date enough to change the transactiosn allowed status to false.
+        # If the result of this transaction will be less than the feeless balance, perform the parent withdrawal method but increment the transactions month to date enough to change the transactiosn allowed status to false.
         if @balance - amount < @feeless_balance
-          super
           @transactions_month_to_date += @max_monthly_transactions
-        else
-          #Otherwise, perform the parent withdrawl method and refund the withdrawl fee
           super
-          @balance += @withdrawl_fee
+        else
+          #Otherwise, perform the parent withdrawal method and refund the withdrawal fee
+          super
+          @balance += @withdrawal_fee
         end
       else
         # If the account is frozen, return the account frozen message.
@@ -329,25 +337,25 @@ module Bank
     # Modify the inherited deposit method.
     def deposit(amount)
 
-      # Verify if transactions are currently allowed, only proceed if true
-      if transactions_allowed? == true
+      # If the current balance is less than the feeless balance
+      if @balance < @feeless_balance
 
-        # If the current balance is less than the feeless balance
-        if @balance < @feeless_balance
+        #Perform the parent deposit method (no transaction penalty to bring account up to feeless balance)
+        return super
 
-          #Perform the parent deposit method (no transaction penalty to bring account up to feeless balance)
-          super
+      else
 
-        else
+        if transactions_allowed? == true
 
           # Increment the transactions month to date and then peform the parent deposit method
           @transactions_month_to_date += 1
-          super
+          return super
+
+        else
+          # If the account is frozen, return the account frozen message.
+          account_frozen
         end
 
-      else
-        # If the account is frozen, return the account frozen message.
-        account_frozen
       end
     end
 
@@ -361,7 +369,7 @@ module Bank
     end
 
     # Reset the transactions month to date to zero
-    def reset_transactions_acount
+    def reset_transactions_count
       @transactions_month_to_date = 0
     end
 
@@ -451,48 +459,125 @@ module Bank
 end
 
 
-# MISCELLANEOUS TESTS
-# Bank::Account.create_accounts_from_csv("support/accounts.csv")
-# Bank::Owner.create_owners_from_csv("support/owners.csv")
-# Bank::Account.associate_owner_and_account_by_csv("support/account_owners.csv")
-# puts Bank::Account.find(1215)
-# puts Bank::Account.find(61239)
-# Bank::Account.save_all_data_to_csv
+# TEST ACCOUNT AND OWNER CREATION AND ASSOCIATION
+Bank::Account.create_accounts_from_csv("support/accounts.csv")
+Bank::Owner.create_owners_from_csv("support/owners.csv")
+Bank::Account.associate_owner_and_account_by_csv("support/account_owners.csv")
+Bank::Account.save_all_data_to_csv
 
-# #
-# test_savings = Bank::SavingsAccount.new(1235,100)
-# puts test_savings.puts_account_info
-# puts test_savings.withdraw(10)
-# puts test_savings.add_interest(0.25)
+# TEST ACCOUNT.FIND (TURN ON ACCOUNT AND OWNER CREATION ASN ASSOCIATION TESTS FIRST)
+puts "Should return account instance:"
+puts Bank::Account.find(1215)
+puts "Should return Account ID not in system:"
+puts Bank::Account.find(61239)
+
+# TEST BASIC ACCOUNT - ALL VALID
+test_basic = Bank::Account.new(1234,10000)
+puts "Should return 9000:"
+puts test_basic.withdraw(1000)
+puts "Should return 11000:"
+puts test_basic.deposit(2000)
+
+# # TEST BASIC ACCOUNT - INVALID INITIAL BALANCE
+# puts "Should raise Argument Error:"
+# test_basic2 = Bank::SavingsAccount.new(1234,-10000)
+
+# TEST SAVINGS ACCOUNT - INVALID WITHDRAWAL (TURN ON ALL VALID SAVINGS ACCOUNT TEST FIRST)
+puts "Should return 'You do not have enough money in your account to withdraw that amount.' 11000"
+puts test_basic.withdraw(20000)
+
+# TEST SAVINGS ACCOUNT - ALL VALID
+test_savings = Bank::SavingsAccount.new(1234,10000)
+puts "Should return 8800:"
+puts test_savings.withdraw(1000)
+puts "Should return 22.0:"
+puts test_savings.add_interest(0.25)
+
+# TEST SAVINGS ACCOUNT - INVALID WITHDRAWAL (TURN ON ALL VALID SAVINGS ACCOUNT TEST FIRST)
+puts "Should return 'You do not have enough money in your account to withdraw that amount.' 8822.0"
+puts test_savings.withdraw(20000)
+
+# # TEST SAVINGS ACCOUNT - INVALID INITIAL BALANCE
+# puts "Should raise Argument Error:"
+# test_savings2 = Bank::SavingsAccount.new(1234,-10000)
+
+# TEST CHECKING ACCOUNT - ALL VALID
+test_checking = Bank::CheckingAccount.new(1234,12000)
+puts "Should return 9900:"
+puts test_checking.withdraw(2000)
+
+# TEST CHECKING ACCOUNT WITHDRAW USING CHECK (TURN ON ALL VALID CHECKING ACCOUNT TEST FIRST)
+puts test_checking.withdraw_using_check(4900)
+puts test_checking.account_status
+puts test_checking.withdraw_using_check(1000)
+puts test_checking.account_status
+puts test_checking.withdraw_using_check(1000)
+puts test_checking.account_status
+puts "Four check should incur addtional 100 deduction"
+puts test_checking.withdraw_using_check(1000)
+puts test_checking.account_status
+puts "Check withdrawal should allow negative balance up to 1000"
+puts test_checking.withdraw_using_check(2800)
+puts test_checking.account_status
+puts "Check withdrawal should not allow negative balance beyond 1000"
+puts test_checking.withdraw_using_check(1)
+puts test_checking.account_status
 
 
-# test_checking = Bank::CheckingAccount.new(1234,120)
-# puts test_checking.puts_account_info
-# puts test_checking.withdraw(20)
-# puts test_checking.puts_account_info
-#
-# puts test_checking.withdraw_using_check(105)
-# puts test_checking.puts_account_info
-#
-# puts test_checking.reset_checks
-# puts test_checking.checks_used
+# TEST RESET CHECKS (TURN ON VALID CHECKING AND WITHDRAW USING CHECKS FIRST)
+puts test_checking.reset_checks
+puts test_checking.checks_used
 
-#
-# test_money_market = Bank::MoneyMarketAccount.new(1234,20000)
-# puts test_money_market.account_status
-# test_money_market.withdraw(1000)
-# puts test_money_market.account_status
-# test_money_market.deposit(1000)
-# puts test_money_market.account_status
-# test_money_market.deposit(1000)
-# puts test_money_market.account_status
-# test_money_market.deposit(1000)
-# puts test_money_market.account_status
-# test_money_market.deposit(1000)
-# puts test_money_market.account_status
-# test_money_market.deposit(1000)
-# puts test_money_market.account_status
-# test_money_market.deposit(1000)
-# puts test_money_market.account_status
-# test_money_market.deposit(1000)
-# puts test_money_market.account_status
+# TEST MONEY MARKET ACCOUNT - ALL VALID
+test_money_market = Bank::MoneyMarketAccount.new(1234,2000000)
+puts "Should return 1900000:"
+puts test_money_market.withdraw(100000)
+puts "Should return 2000000:"
+puts test_money_market.deposit(100000)
+
+# TEST MONEY MARKET ACCOUNT MAX TRANSACTIONS
+puts test_money_market.account_status
+puts test_money_market.deposit(1000)
+puts test_money_market.account_status
+puts test_money_market.deposit(1000)
+puts test_money_market.account_status
+puts test_money_market.deposit(1000)
+puts test_money_market.account_status
+puts test_money_market.deposit(1000)
+puts test_money_market.account_status
+puts "Should freeze account (6 transactions already completed):"
+puts test_money_market.deposit(1000)
+puts test_money_market.account_status
+
+# TEST MONEY MARKET TRANSACTION COUNT RESET
+test_money_market.reset_transactions_count
+puts "Should return 0:"
+puts test_money_market.transactions_month_to_date
+
+# TEST MONEY MARKET WITHDRAWAL
+puts "Should return 1004000:"
+puts test_money_market.withdraw(1000000)
+puts "Should return 984000:"
+puts test_money_market.withdraw(10000)
+puts "Should freeze account (Balance dropped below 100000)"
+puts test_money_market.withdraw(10000)
+
+# TEST MONEY MARKET DEPOSIT
+puts test_money_market.reset_transactions_count
+puts "Transactions month to date is:"
+puts test_money_market.transactions_month_to_date
+puts "Should return 994000"
+puts test_money_market.deposit(10000)
+puts "Transactions month to date should not have changed (Account balance below 100000):"
+puts test_money_market.transactions_month_to_date
+puts "Should return 104000:"
+puts test_money_market.deposit(10000)
+puts "Transactions month to date should not have changed (Account balance brought above 100000):"
+puts test_money_market.transactions_month_to_date
+puts "Should return 104000:"
+puts test_money_market.deposit(10000)
+puts "Transactions month to date should increment by 1:"
+puts test_money_market.transactions_month_to_date
+
+# TEST MONEY MARKET ADD INTEREST
+puts test_money_market.add_interest(0.25)
